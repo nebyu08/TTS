@@ -13,7 +13,7 @@ class Encoder(nn.Module):
         super().__init__()
         self.embedding=nn.Embedding(vocab_size,embedding_dim)
         conv_layers=[]
-        for _ in range(num_conv_layers);
+        for _ in range(num_conv_layers):
             conv_layers.append(
                 nn.Sequential(
                     nn.Conv1d(in_channels=embedding_dim,out_channels=conv_filters,kernel_size=kernel_size,padding=(kernel_size-1)//2),
@@ -21,7 +21,6 @@ class Encoder(nn.Module):
                     nn.ReLU()
                 )
             )
-
 
         #make it sequential
         self.conv_stack=nn.Sequential(*conv_layers)
@@ -42,7 +41,6 @@ class Encoder(nn.Module):
         outputs,_=self.lstm(x)
         return outputs
     
-
 class Attention(nn.Module):
     def __init__(self,attention_dim):
         super().__init__()
@@ -55,6 +53,10 @@ class Attention(nn.Module):
         query=query.unsqueeze(1)
         key=self.key(key)  # batch size,sequence length ,attention dim
 
+        print(f"hello from inside.")
+        print(query.shape)
+        print(key.shape)
+
         #calculate similarity
         energy=self.energy_layer(torch.tanh(query+key))  # batch size,seq_len,1
         attention_weight=torch.softmax(energy.squeeze(-1),dim=1)  #batch size, seq len
@@ -63,7 +65,6 @@ class Attention(nn.Module):
         context=torch.bmm(attention_weight.unsqueeze(1) ,key).squeeze(1) #batch size, attention dim
 
         return context,attention_weight
-
 
     
 #Gegenerate MEL SPECTOGRAM
@@ -75,7 +76,8 @@ class Decoder(nn.Module):
                  prenet_dim=256,
                  mel_dim=80
                  ):
-        super().__init()
+        
+        super().__init__()
 
         #prenet
         self.prenet=nn.Sequential(
@@ -123,6 +125,8 @@ class Decoder(nn.Module):
     def forward(self,encoder_outputs,prev_mel_frame,hidden,cell):
         prenet_output=self.prenet(prev_mel_frame)
 
+        print(f"inside decoder",hidden[0][-1].shape)
+
         context,_=self.attention(hidden[0][-1],encoder_outputs)
 
         #lstm input
@@ -146,4 +150,3 @@ class Decoder(nn.Module):
 
 
         return mel_frame.squeeze(1),refine_mel_frame,stop_token,hidden,cell
-        
