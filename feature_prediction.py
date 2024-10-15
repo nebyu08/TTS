@@ -53,10 +53,10 @@ class Attention(nn.Module):
         query=query.unsqueeze(1)
         key=self.key(key)  # batch size,sequence length ,attention dim
 
-        print(f"hello from inside.")
-        print(query.shape)
-        print(key.shape)
+        print(f"shape of query is {query.shape}")
+        print(f"shape of key is {key.shape}")
 
+        
         #calculate similarity
         energy=self.energy_layer(torch.tanh(query+key))  # batch size,seq_len,1
         attention_weight=torch.softmax(energy.squeeze(-1),dim=1)  #batch size, seq len
@@ -71,7 +71,7 @@ class Attention(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self,
-                 attention_dim=512,
+                 attention_dim=1024,
                  lstm_units=1024,
                  prenet_dim=256,
                  mel_dim=80
@@ -121,11 +121,9 @@ class Decoder(nn.Module):
 
         self.stop_token_prediction=nn.Linear(lstm_units+attention_dim,1)
         self.sigmoid=nn.Sigmoid()
-
+        
     def forward(self,encoder_outputs,prev_mel_frame,hidden,cell):
         prenet_output=self.prenet(prev_mel_frame)
-
-        print(f"inside decoder",hidden[0][-1].shape)
 
         context,_=self.attention(hidden[0][-1],encoder_outputs)
 
