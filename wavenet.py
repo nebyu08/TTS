@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn 
-
+from utils import mu_encoding
 
 class GatedActivationUnits(torch.nn):
     def __init__(self,in_shape):
@@ -73,24 +73,6 @@ class WaveNet(nn.Module):
         #final layer
         self.final_conv1=nn.Conv1d(in_channel,in_channel,kernel_size=kernel_size)
         self.final_conv2=nn.Conv1d(in_channel,256,kernel_size=1 )
-    
-    def mu_encoding(audio,mu=255):
-        """this function received raw audion as input and returns a compressed values 
-
-        Args:
-            audio (audio): average human sounds
-        """
-
-        #audio mu
-        audio=torch.clamp(audio,min=-1.0,max=1.0)
-
-        #scale to range -1 to 1
-        result=torch.sign(audio)*(torch.log1p(mu*torch.abs(audio)))/(torch.log1p(torch.tensor(mu,dtype=torch.float32)))
-
-        #scale from 1 to mu[255]
-        quantized=(((result+1)/2)*mu).long
-
-        return quantized
     
 
     def forward(self,inputs):  #input shape is batch size,1,sequence length(16000)
