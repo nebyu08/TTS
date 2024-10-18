@@ -42,23 +42,37 @@ class WaveNet(nn.Module):
         #initialize gated activation units
         self.gated_units=GatedActivationUnits(in_channel)
 
-        #layer of dilated conv and gated activation 
-        self.layers=nn.ModuleList()
-        self.skip_con=nn.ModuleList()
-        self.residual_con=nn.ModuleList
+        self.blocks=nn.ModuleList()
 
+        for block_num in range(self.n_block):
+            block_layer=nn.ModuleList()
+            for layer_block in range(self.n_layers):
+                dilation=dilation_sz**layer_block
+                block_layer.append(
+                    CasualDilatedConv(
+                        in_channel if layer_block==1 and block_num==1 else out_channel,
+                        out_channel,
+                        dilation=dilation,
+                        kernel_sz=kernel_size
+                    )
+                )
+
+                block_layer.append(GatedActivationUnits(in_shape=out_channel))
+
+            self.blocks.append(block_layer)
         
-        for block_num in range(n_block):
-            for layer_block in range(n_layers_per_block):
-                self.layers.append(CasualDilatedConv(1 if block_num==0 and layer_block==0 else in_channel,out_channel,kernel_sz=2,dilation=dilation_sz))
-                self.layers.append(GatedActivationUnits(in_shape=out_channel))
+        
+        self.skip_con=nn.ModuleList([
+            nn.Conv1d(out_channel,out_channel,kernel_size=1) for _ in range(n_block*n_layers_per_block)
+        ])
 
-                self.skip_con.append(nn.Conv1d(out_channel,out_channel,kernel_size=1))
-                self.residual_con.append(nn.Conv1d(out_channel,in_channel,kernel_size=1))
+        self.residual_con=nn.ModuleList([
+            nn.Conv1d(out_channel,in_channel,kernel_size=1) for _ in range(n_block*n_layers_per_block)
+        ])
 
-        #final conv
-        self.final_conv1=nn.Conv1d(in_channels=in_channel,out_channels=in_channel,kernel_size=1)
-        self.final_conv2=nn.Conv1d(in_channels=in_channel,out_channels=256,kernel_size=1 )
+        #final layer
+        self.final_conv1=nn.Conv1d(in_channel,in_channel,kernel_size=kernel_size)
+        self.final_conv2=nn.Conv1d(in_channel,256,kernel_size=1 )
     
     def mu_encoding(audio,mu=255):
         """this function received raw audion as input and returns a compressed values 
@@ -81,8 +95,28 @@ class WaveNet(nn.Module):
 
     def forward(self,inputs):  #input shape is batch size,1,sequence length(16000)
         #quantized data
-        inputs=self.mu_encoding(inputs)  #input here batch size,1,16000
+        x=self.mu_encoding(inputs)  #input here batch size,1,16000
 
-        skip_output=[]
+        skip_outputs=[]
 
-       for i in range(len())
+        for block_num,block_layer in enumerate(self.blocks):
+            for layer_num in range(self.n_layers):
+                #conv and gated output
+                conv=block_layer[layer_num*2](x)
+                gated=block_layer[layer_num*2+1](x)
+
+                #skip and residual connection
+                skip_out=self.skip_con[self.block_num*self.n_layers+layer_num](gated)
+                skip_outputs.append(skip_out)
+
+                residual_out=self.residual_con(block_num*self.n_layers+layer_num)(gated)
+                x=x+residual_out
+
+        #sum the skip connections
+        skip_sum=sum(skip_outputs)    #batch size,n_skip_channels,sequence length
+
+        #final output
+        output=torch.relu(self.final_conv1(skip_out))
+        output=self.final_conv2(output)  #batch size,256,sequence length
+
+        return  torch.softmax(output,dim=1)
