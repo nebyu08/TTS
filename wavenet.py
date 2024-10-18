@@ -16,7 +16,7 @@ class GatedActivationUnits(torch.nn):
 class CasualDilatedConv(nn.Module):
     def __init__(self,in_channel,out_channle,dilation,kernel_sz):
         super().__init__()
-        self.conv=nn.Conv1d(in_channels=in_channel,out_channels=out_channle,kernel_size=kernel_sz,dilation=dilation,padding=(kernel_sz-1)*dilation)
+        self.conv=nn.Conv1d(in_channels=in_channel,out_channels=out_channle,kernel_size=kernel_sz,dilation=dilation,padding=(kernel_sz-1)*dilation) #reason for padding is input and output shape must be the same
 
     def forward(self,x):
         return self.conv(x)
@@ -44,16 +44,21 @@ class WaveNet(nn.Module):
 
         #layer of dilated conv and gated activation 
         self.layers=nn.ModuleList()
+        self.skip_con=nn.ModuleList()
+        self.residual_con=nn.ModuleList
+
         
         for block_num in range(n_block):
             for layer_block in range(n_layers_per_block):
-                self.layers.append(CasualDilatedConv(1 if block_num==0 and layer_block==0 else 64,64,kernel_sz=2,dilation=dilation_sz))
-                self.layers.append(GatedActivationUnits(in_shape=64))
+                self.layers.append(CasualDilatedConv(1 if block_num==0 and layer_block==0 else in_channel,out_channel,kernel_sz=2,dilation=dilation_sz))
+                self.layers.append(GatedActivationUnits(in_shape=out_channel))
 
+                self.skip_con.append(nn.Conv1d(out_channel,out_channel,kernel_size=1))
+                self.residual_con.append(nn.Conv1d(out_channel,in_channel,kernel_size=1))
 
         #final conv
-        self.conv=nn.Conv1d(in_channels=in_channel,out_channels=in_channel,kernel_size=kernel_size)
-
+        self.final_conv1=nn.Conv1d(in_channels=in_channel,out_channels=in_channel,kernel_size=1)
+        self.final_conv2=nn.Conv1d(in_channels=in_channel,out_channels=256,kernel_size=1 )
     
     def mu_encoding(audio,mu=255):
         """this function received raw audion as input and returns a compressed values 
@@ -79,8 +84,5 @@ class WaveNet(nn.Module):
         inputs=self.mu_encoding(inputs)  #input here batch size,1,16000
 
         skip_output=[]
-        layer_output=[]
 
-        for block_level in range(self.n_block):
-            for layer_level in range(self.n_layers):
-                
+       for i in range(len())
